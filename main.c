@@ -27,30 +27,30 @@ int main(void) {
     lcd_init();
 
     while (1) {
-        uint32_t delay = rand() % 5 + 1;
-        LPC_GPIO1->FIOSET |= (1 << LED_PIN);
+        uint32_t delay = rand() % 5 + 1; // 1-5 seconds
+        LPC_GPIO1->FIOSET |= (1 << LED_PIN); // Turn on LED
         for (i = 0; i < delay * 1000000; i++);
-        LPC_GPIO1->FIOCLR |= (1 << LED_PIN);
+        LPC_GPIO1->FIOCLR |= (1 << LED_PIN); // Turn off LED
 
-        while (!(LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)));
-        start_time = LPC_TIM0->TC;
-        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN));
-        end_time = LPC_TIM0->TC;
-        reaction_time = end_time - start_time;
+        while (!(LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN))); // Wait for button press
+        start_time = LPC_TIM0->TC; // Start time
+        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)); // Wait for button release
+        end_time = LPC_TIM0->TC; // End time
+        reaction_time = end_time - start_time; // Calculate reaction time
 
-        sprintf(reaction_str, "Reaction time: %dms", reaction_time / 1000);
-        lcd_comdata(0x80, 0);
+        sprintf(reaction_str, "Reaction time: %dms", reaction_time / 1000); // Convert reaction time to string
+        lcd_comdata(0x80, 0); // Set cursor to first line
         delay_lcd(800);
-        lcd_puts((const unsigned char *)"                ");
-        lcd_comdata(0x80, 0);
+        lcd_puts((const unsigned char *)"                ");// Clear first line
+        lcd_comdata(0x80, 0); // Set cursor to first line
         delay_lcd(800);
-        lcd_puts((const unsigned char *)reaction_str);
+        lcd_puts((const unsigned char *)reaction_str); // Print reaction time
     }
 }
 
 void lcd_init(void) {
     LPC_PINCON->PINSEL1 &= 0xFC003FFF; //P0.23 to P0.28
-    LPC_GPIO0->FIODIR |= (1 << LCD_RS_PIN) | (1 << LCD_E_PIN) | (0x0F << LCD_D4_PIN);
+    LPC_GPIO0->FIODIR |= (1 << LCD_RS_PIN) | (1 << LCD_E_PIN) | (0x0F << LCD_D4_PIN); //P0.23 to P0.28
     delay_lcd(3200);
     lcd_comdata(0x33, 0);
     delay_lcd(30000);
@@ -63,7 +63,7 @@ void lcd_init(void) {
 }
 
 void lcd_comdata(int value, int control) {
-    LPC_GPIO0->FIOPIN &= ~(1 << LCD_RS_PIN);
+    LPC_GPIO0->FIOPIN &= ~(1 << LCD_RS_PIN); 
     if (control == 0)
         delay_lcd(1);
     else
@@ -74,12 +74,11 @@ void lcd_comdata(int value, int control) {
 void lcd_puts(const unsigned char *buf1){
 	unsigned int i=0;
 	unsigned int temp3;
-	while(buf1[i]!='\0'){
+	while(buf1[i]!='\0'){ // loop until null character
 		temp3 = buf1[i];
 		lcd_comdata(temp3, 1);
 		i++;
-		if(i==16)
-		{
+		if(i==16){ // if i=16, go to next line
 			lcd_comdata(0xc0, 0);
 		}
 	}
@@ -111,7 +110,6 @@ void clear_ports(void)
     LPC_GPIO0->FIOCLR = 0x0F<<23; //Clearing data lines
     LPC_GPIO0->FIOCLR = 1<<27; //Clearing RS line
     LPC_GPIO0->FIOCLR = 1<<28; //Clearing Enable line
-    
     return;
 }
 
