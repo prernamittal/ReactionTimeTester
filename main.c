@@ -17,13 +17,13 @@ void clear_ports(void);
 #define LCD_D4_PIN 23
 
 #define LED_PIN 22
-#define BUTTON_PIN 25
+#define BUTTON_PIN 23 //SW3
 
 int main(void) {
     uint32_t start_time, end_time, reaction_time;
     char reaction_str[16];
     LPC_GPIO1->FIODIR |= (1 << LED_PIN);
-    LPC_GPIO2->FIODIR &= ~(1 << BUTTON_PIN);
+    LPC_GPIO2->FIOPIN = (1 << 10);
     lcd_init();
 
     while (1) {
@@ -32,9 +32,9 @@ int main(void) {
         for (i = 0; i < delay * 1000000; i++);
         LPC_GPIO1->FIOCLR |= (1 << LED_PIN); // Turn off LED
 
-        while (!(LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN))); // Wait for button press
+        while (!(LPC_GPIO1->FIOPIN & (1 << BUTTON_PIN))); // Wait for button press
         start_time = LPC_TIM0->TC; // Start time
-        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)); // Wait for button release
+        while (LPC_GPIO1->FIOPIN & (1 << BUTTON_PIN)); // Wait for button release
         end_time = LPC_TIM0->TC; // End time
         reaction_time = end_time - start_time; // Calculate reaction time
 
