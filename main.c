@@ -4,6 +4,7 @@
 #include <string.h>
 
 unsigned int i;
+unsigned long LED = 0x00000010;
 
 void lcd_init(void);
 void lcd_comdata(int, int);
@@ -15,33 +16,34 @@ void clear_ports(void);
 #define LCD_RS_PIN 27
 #define LCD_E_PIN 28
 #define LCD_D4_PIN 23
-
-#define LED_PIN 22
-#define BUTTON_PIN 23 //SW3
+#define BUTTON_PIN 12
 
 int main(void) {
     uint32_t start_time, end_time, reaction_time;
     char reaction_str[16];
-    LPC_GPIO1->FIODIR |= (1 << LED_PIN);
-    LPC_GPIO2->FIOPIN = (1 << 10);
+    LPC_PINCON->PINSEL0 &= 0xFF0000FF; //Configure Port0 PINS P0.4-P0.11 as GPIO function
+    LPC_GPIO0->FIODIR |= 0x00000FF0; //Configure P0.4-P0.11 as output port
+    LPC_GPIO2->FIODIR &= ~(1 << BUTTON_PIN);
     lcd_init();
 
     while (1) {
         uint32_t delay = rand() % 5 + 1; // 1-5 seconds
-        LPC_GPIO1->FIOSET |= (1 << LED_PIN); // Turn on LED
+        LPC_GPIO0->FIOSET |= (1 << LED); // Turn on LED
         for (i = 0; i < delay * 1000000; i++);
-        LPC_GPIO1->FIOCLR |= (1 << LED_PIN); // Turn off LED
+        LPC_GPIO0->FIOCLR |= (1 << LED); // Turn off LED
 
-        while (!(LPC_GPIO1->FIOPIN & (1 << BUTTON_PIN))); // Wait for button press
+        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)); //button press
+        delayMS(10000); //timer enable, delay, disable
         start_time = LPC_TIM0->TC; // Start time
-        while (LPC_GPIO1->FIOPIN & (1 << BUTTON_PIN)); // Wait for button release
+        while (!(LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN))); //button release
+        delayMS(10000); //timer enable, delay, disable
         end_time = LPC_TIM0->TC; // End time
         reaction_time = end_time - start_time; // Calculate reaction time
 
         sprintf(reaction_str, "Reaction time: %dms", reaction_time / 1000); // Convert reaction time to string
         lcd_comdata(0x80, 0); // Set cursor to first line
         delay_lcd(800);
-        lcd_puts((const unsigned char *)"                ");// Clear first line
+        lcd_comdata(0x01,0);// Clear first line
         lcd_comdata(0x80, 0); // Set cursor to first line
         delay_lcd(800);
         lcd_puts((const unsigned char *)reaction_str); // Print reaction time
@@ -60,6 +62,9 @@ void lcd_init(void) {
     delay_lcd(30000);
     lcd_comdata(0x0C, 0);//display on cursor off
     delay_lcd(800);
+    lcd_comdata(0x06, 0);//entry mode set
+    delay_lcd(800);
+    lcd_comdata(0x01, 0);//clear display
 }
 
 void lcd_comdata(int value, int control) {
@@ -112,5 +117,3 @@ void clear_ports(void)
     LPC_GPIO0->FIOCLR = 1<<28; //Clearing Enable line
     return;
 }
-
-
