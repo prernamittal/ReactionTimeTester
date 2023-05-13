@@ -12,6 +12,7 @@ void lcd_puts(const unsigned char *);
 void delay_lcd(unsigned int);
 void write_lcd(int, int);
 void clear_ports(void);
+void delayMS(unsigned int milliseconds);
 
 #define LCD_RS_PIN 27
 #define LCD_E_PIN 28
@@ -29,14 +30,12 @@ int main(void) {
     while (1) {
         uint32_t delay = rand() % 5 + 1; // 1-5 seconds
         LPC_GPIO0->FIOSET |= (1 << LED); // Turn on LED
-        for (i = 0; i < delay * 1000000; i++);
+        for (i = 0; i < delay * 10000; i++);
         LPC_GPIO0->FIOCLR |= (1 << LED); // Turn off LED
-
-        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)); //button press
-        delayMS(10000); //timer enable, delay, disable
+				delayMS(1000);
         start_time = LPC_TIM0->TC; // Start time
-        while (!(LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN))); //button release
-        delayMS(10000); //timer enable, delay, disable
+        while (LPC_GPIO2->FIOPIN & (1 << BUTTON_PIN)); // Wait for button press
+				delayMS(1000);
         end_time = LPC_TIM0->TC; // End time
         reaction_time = end_time - start_time; // Calculate reaction time
 
@@ -67,13 +66,15 @@ void lcd_init(void) {
     lcd_comdata(0x01, 0);//clear display
 }
 
-void lcd_comdata(int value, int control) {
-    LPC_GPIO0->FIOPIN &= ~(1 << LCD_RS_PIN); 
-    if (control == 0)
-        delay_lcd(1);
-    else
-        delay_lcd(800);
-    write_lcd(value, 0);
+void lcd_comdata(int temp1, int type){
+	int temp2 = temp1 & 0xf0; //move data (26-8+1) times : 26 - HN place, 4 - Bits
+	temp2 = temp2 << 19; //data lines from 23 to 26
+	write_lcd(temp2, type);
+	temp2 = temp1 & 0x0f; //26-4+1
+	temp2 = temp2 << 23; 
+	write_lcd(temp2, type);
+	delay_lcd(1000);
+	return;
 }
 
 void lcd_puts(const unsigned char *buf1){
@@ -109,11 +110,19 @@ void write_lcd(int temp2, int type){ //write to command/data reg
     return;
 }
 
-void clear_ports(void)
-{
+void clear_ports(void){
     // Clearing the lines at power on
     LPC_GPIO0->FIOCLR = 0x0F<<23; //Clearing data lines
     LPC_GPIO0->FIOCLR = 1<<27; //Clearing RS line
     LPC_GPIO0->FIOCLR = 1<<28; //Clearing Enable line
     return;
+}
+
+void delayMS(unsigned int milliseconds){ //Using Timer0
+	LPC_TIM0->CTCR = 0x0; //Timer mode
+	LPC_TIM0->PR = 2; //Increment TC at every 3 pclk
+	LPC_TIM0->TCR = 0x02; //Reset Timer
+	LPC_TIM0->TCR = 0x01; //Enable timer
+	while(LPC_TIM0->TC < milliseconds); //wait until timer counter reaches the desired delay
+	LPC_TIM0->TCR = 0x00; //Disable timer
 }
